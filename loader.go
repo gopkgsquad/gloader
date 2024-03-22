@@ -59,7 +59,7 @@ func (w *Watcher) Start() {
 	})
 
 	if mainGoPath == "" {
-		w.logger.Fatal("main.go file not found in source directory")
+		w.logger.Error("main.go file not found in source directory")
 	}
 
 	for {
@@ -79,11 +79,11 @@ func (w *Watcher) checkChanges(mainGoPath string) {
 			if !info.IsDir() && filepath.Ext(path) == ".go" {
 				modTime := info.ModTime()
 				if modTime.After(w.lastCheckTime) {
-					w.logger.Infof("🔄 Update Alert: File '%s' has been modified. 🔄\n", info.Name())
+					w.logger.Infof("🔄 update alert: File '%s' has been modified. 🔄", info.Name())
 					w.lastCheckTime = now
 					// Now you can use `mainGoFullPath` in your reload function
 					if err := w.reload(mainGoPath); err != nil {
-						w.logger.Errorf("Error reloading application: %s", err.Error())
+						w.logger.Errorf("error reloading application: %s", err.Error())
 					}
 
 				}
@@ -91,24 +91,26 @@ func (w *Watcher) checkChanges(mainGoPath string) {
 			return nil
 		})
 		if err != nil {
-			w.logger.Errorf("Error walking directory: %s", err.Error())
+			w.logger.Errorf("error walking directory: %s", err.Error())
 		}
 	}
 }
 
 func (w *Watcher) reload(mainGoFullPath string) error {
 	w.stopServer()
-	<-w.serverStopChan
-	w.logger.Warning("🔄 Reload Alert: Reloading application... 🔄")
+
+	// <-w.serverStopChan
+
+	w.logger.Warning("🔄 reload alert: reloading application... 🔄")
 	cmd := exec.Command("go", "run", mainGoFullPath)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
-		w.logger.Fatalf("reloading application failed due to: %s", err.Error())
+		w.logger.Errorf("reloading application failed due to: %s", err.Error())
 	}
 
 	if err := cmd.Wait(); err != nil {
-		w.logger.Fatalf("restarting application failed due to: %s", err.Error())
+		w.logger.Errorf("restarting application failed due to: %s", err.Error())
 	}
 	return nil
 }
@@ -122,9 +124,7 @@ func (w *Watcher) startServer() {
 func (w *Watcher) stopServer() {
 	if w.server != nil {
 		if err := w.server.Shutdown(context.Background()); err != nil {
-			w.logger.Fatalf("stopping server failed due to: %s", err.Error())
-		} else {
-			close(w.serverStopChan)
+			w.logger.Errorf("stopping server failed due to: %s", err.Error())
 		}
 	}
 }
